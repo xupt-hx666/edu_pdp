@@ -44,7 +44,7 @@ def split_non_iid_data(X, y, num_clients):
         np.random.shuffle(indices)
         client_data.append((X[indices], y[indices]))
     return client_data
-
+3.实现效果检验量化。通过计算不同客户端模型中personal_layers（个性化层）参数的欧氏距离，衡量各客户端模型的个性化程度。差异度越大，表明各客户端模型在本地数据上的适应越独特；差异度越小，则说明模型个性化程度较低。此外有效验证了联邦学习策略在联邦学习框架（如 FedPer）中，通常希望：基础层（共享层）保持一致性（通过聚合更新）。个性化层（本地层）保持差异性（通过本地训练保留特有模式）。通过量化差异度，验证算法是否达到了预期效果。
 
 运行结果展示：
 === Final Test ===
