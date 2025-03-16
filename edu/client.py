@@ -25,6 +25,13 @@ def train(args, model, client_id):
             outputs = model(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
+            # 梯度裁剪和噪声添加
+            torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_threshold)
+            # 梯度裁剪，防止加入噪声后梯度爆炸
+            for param in model.parameters():
+                if param.grad is not None:
+                    noise = torch.randn_like(param.grad) * args.sigma
+                    param.grad += noise.to(args.device)
             optimizer.step()
 
             epoch_loss += loss.item()
