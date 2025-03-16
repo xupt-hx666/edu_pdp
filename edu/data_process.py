@@ -11,14 +11,20 @@ args = args_parser()
 def generate_education_data():
     # 生成教育场景的合成数据（20个特征，5个类别）
     X, y = make_classification(
-        n_samples=1000,
+        n_samples=5000,
         n_features=args.input_dim,
         n_classes=args.num_classes,
-        n_informative=3,
-        n_clusters_per_class=1,  # 每个分类中数据集中在一簇
-        random_state=42  # 随机数状态，若设置成None则每次生成的数据集都不一样，42保证每次生成的数据集一致便于后续的模型评估
+        class_sep=2.0,  # 类别分离程度
+        n_informative=8,  # 对分类有效的特征数量
+        weights=[0.3, 0.3, 0.1, 0.2, 0.1],  # 每一类数据占的权重
+        n_clusters_per_class=1,  # 每个分类中数据集中在一簇(即在每一类中数据集中)
+        random_state=42,  # 随机数状态，若设置成None则每次生成的数据集都不一样，42保证每次生成的数据集一致便于后续的模型评估
+        shuffle=True
     )
     return X, y
+
+
+"""存在约束条件:class*cluster<=2**informative"""
 
 
 def split_non_iid_data(X, y, num_clients):
