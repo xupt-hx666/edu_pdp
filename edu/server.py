@@ -45,7 +45,8 @@ class FedPer:
 
     def server_round(self, round_idx):
         num_selected = max(int(args.C * args.K), 1)
-        selected_clients = np.random.choice(range(args.K), num_selected, replace=False)
+        # selected_clients = np.random.choice(range(args.K), num_selected, replace=False)
+        selected_clients = list(range(num_selected))
 
         # 更新客户端基础层参数（而不是整个模型）
         for idx in selected_clients:
