@@ -107,6 +107,7 @@ for param in model.parameters():
     if param.grad is not None:
         noise = torch.randn_like(param.grad) * args.sigma
         param.grad += noise.to(args.device)
+2. 使用部分同态安全方案(Paillier加密算法)。
 
 
 
