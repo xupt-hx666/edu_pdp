@@ -75,6 +75,7 @@ def validate_personalization(models):
     print(f"个性化层平均差异度：{diff:.4f}")
 
 运行结果展示：
+1.未加高斯噪声
 === Final Test ===
 ====================================
 Client 0 Test | Loss: 0.0069 | Acc: 99.83%
@@ -86,6 +87,18 @@ Client 4 Test | Loss: 0.0009 | Acc: 100.00%
 =======================
 个性化层平均差异度：10.9441
 个性化层权重矩阵点的欧式距离>10说明，差异化大，实验效果良好。
+2.梯度加入高斯噪声
+=== Final Test ===
+====================================
+Client 0 Test | Loss: 0.0403 | Acc: 99.67%
+Client 1 Test | Loss: 0.0479 | Acc: 98.75%
+Client 2 Test | Loss: 0.0565 | Acc: 98.34%
+Client 3 Test | Loss: 0.0648 | Acc: 98.68%
+Client 4 Test | Loss: 0.0141 | Acc: 99.75%
+个性层差异
+=======================
+个性化层平均差异度：32.2321
+3.paillier同态加密参数结果
 
 
 
