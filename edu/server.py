@@ -1,9 +1,8 @@
-import torch
-import numpy as np
 from model import EducationModel
 from args import args_parser
 from client import train, test, validate_personalization
 import torch.nn as nn
+from crypto import PaillierEncryptor
 
 args = args_parser()
 
@@ -11,11 +10,13 @@ args = args_parser()
 class FedPer:
     def __init__(self):
         self.args = args
+        self.encryptor = PaillierEncryptor()
         # 全局模型仅包含基础层
         self.global_base = nn.Sequential(
-            nn.Linear(args.input_dim, 64),
+            nn.Linear(args.input_dim, 128),
             nn.ReLU(),
-            nn.Dropout(0.2)).to(args.device)
+            nn.Dropout(0.2)
+        ).to(args.device)
 
         # 初始化客户端模型（包含完整结构）
         self.client_models = []
@@ -25,23 +26,33 @@ class FedPer:
             model.base_layers.load_state_dict(self.global_base.state_dict())
             self.client_models.append(model)
 
-    def aggregate(self, selected_clients):
-        # 仅聚合基础层参数
-        base_weights = [self.client_models[idx].base_layers.state_dict()
-                        for idx in selected_clients]
-
-        # 联邦平均
+    def aggregate(self, encrypted_weights_list):
+        """聚合加密参数"""
         averaged_weights = {}
-        for key in base_weights[0].keys():
-            averaged_weights[key] = torch.stack(
-                [w[key] for w in base_weights], 0).mean(0)
+        for key in encrypted_weights_list[0].keys():
+            # 提取加密数据和形状
+            encrypted_arrays = [w[key]["encrypted"] for w in encrypted_weights_list]
+            shapes = [w[key]["shape"] for w in encrypted_weights_list]
+            shape = encrypted_weights_list[0][key]["shape"]
+            if not all(shape == shapes[0] for shape in shapes):
+                raise ValueError("参数形状不一致")
 
-        # 更新全局基础层
-        self.global_base.load_state_dict(averaged_weights)
+            # 同态加法聚合
+            summed = []
+            for i in range(len(encrypted_arrays[0])):
+                total = encrypted_arrays[0][i]
+                for arr in encrypted_arrays[1:]:
+                    total += arr[i]
+                summed.append(total)
 
-        # 分发新基础层到所有客户端
-        for model in self.client_models:
-            model.base_layers.load_state_dict(self.global_base.state_dict())
+            # 解密并还原
+            decrypted_tensor = self.encryptor.decrypt_tensor({
+                "shape": shape,
+                "encrypted": summed
+            }).to(args.device)
+            averaged_weights[key] = decrypted_tensor
+
+        return averaged_weights
 
     def server_round(self, round_idx):
         num_selected = max(int(args.C * args.K), 1)
@@ -53,11 +64,16 @@ class FedPer:
             self.client_models[idx].base_layers.load_state_dict(self.global_base.state_dict())
 
         # 客户端本地训练
+        encrypted_weights_list = []
         for idx in selected_clients:
-            self.client_models[idx] = train(args, self.client_models[idx], idx)
+            model = self.client_models[idx]
+            model.base_layers.load_state_dict(self.global_base.state_dict())
+            encrypted_weights = train(args, model, idx, self.encryptor)
+            encrypted_weights_list.append(encrypted_weights)
 
         # 聚合模型
-        self.aggregate(selected_clients)
+        averaged_weights = self.aggregate(encrypted_weights_list)
+        self.global_base.load_state_dict(averaged_weights)
 
     def run(self):
         for r in range(args.r):

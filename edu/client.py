@@ -4,12 +4,12 @@ from data_process import load_data
 import numpy as np
 
 
-def train(args, model, client_id):
+def train(args, model, client_id, encryptor=None):
     model.train()
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam([
-        {'params': model.base_layers.parameters(), 'lr': args.lr * 0.1},
-        {'params': model.personal_layers.parameters(), 'lr': args.lr}
+        {'params': model.base_layers.parameters(), 'lr': args.lr * 0.5},
+        {'params': model.personal_layers.parameters(), 'lr': args.lr*0.8}
     ], weight_decay=args.weight_decay)
 
     train_loader, _ = load_data(client_id)
@@ -43,7 +43,13 @@ def train(args, model, client_id):
         print(
             f"Client {client_id} Epoch {epoch + 1}/{args.E} | Loss: {epoch_loss / len(train_loader):.4f} | Acc: {accuracy:.2f}%")
 
-    return model
+    if encryptor:
+        encrypted_weights = {}
+        for name, param in model.base_layers.state_dict().items():
+            encrypted_weights[name] = encryptor.encrypt_tensor(param)
+        return encrypted_weights
+    else:
+        return model
 
 
 def test(args, model, client_id):

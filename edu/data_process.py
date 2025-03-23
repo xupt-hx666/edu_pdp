@@ -11,7 +11,7 @@ args = args_parser()
 def generate_education_data():
     # 生成教育场景的合成数据（20个特征，5个类别）
     X, y = make_classification(
-        n_samples=5000,
+        n_samples=20000,
         n_features=args.input_dim,
         n_classes=args.num_classes,
         class_sep=2.0,  # 类别分离程度
@@ -28,12 +28,11 @@ def generate_education_data():
 
 
 def split_non_iid_data(X, y, num_clients):
-    # 模拟Non-IID分布：每个客户端只包含2个类别
     client_data = []
     for i in range(num_clients):
-        class_1 = i % args.num_classes
-        class_2 = (i + 1) % args.num_classes
-        indices = np.where((y == class_1) | (y == class_2))[0]
+        # 每个客户端包含3个类别
+        classes = [i % args.num_classes, (i+1) % args.num_classes, (i+2) % args.num_classes]
+        indices = np.where(np.isin(y, classes))[0]
         np.random.shuffle(indices)
         client_data.append((X[indices], y[indices]))
     return client_data
