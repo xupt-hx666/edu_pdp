@@ -101,14 +101,14 @@ Client 4 Test | Loss: 0.0141 | Acc: 99.75%
 3.paillier同态加密参数结果
 === Final Test ===
 ====================================
-Client 0 Test | Loss: 0.8809 | Acc: 80.69%
-Client 1 Test | Loss: 0.8173 | Acc: 78.00%
-Client 2 Test | Loss: 0.7299 | Acc: 77.92%
-Client 3 Test | Loss: 0.4761 | Acc: 89.52%
-Client 4 Test | Loss: 0.5908 | Acc: 78.54%
+Client 0 Test | Loss: 1.0703 | Acc: 80.55%
+Client 1 Test | Loss: 0.7421 | Acc: 87.38%
+Client 2 Test | Loss: 0.6021 | Acc: 82.17%
+Client 3 Test | Loss: 0.7063 | Acc: 87.66%
+Client 4 Test | Loss: 0.5830 | Acc: 83.12%
 个性层差异
 =======================
-个性化层平均差异度：13.4910
+个性化层平均差异度：46.2601
 
 
 
