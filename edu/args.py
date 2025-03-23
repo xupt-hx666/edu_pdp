@@ -16,7 +16,7 @@ def args_parser():
     parser.add_argument('--B', type=int, default=32, help='本地批量大小')
     parser.add_argument('--optimizer', type=str, default='adam', help='优化器')
     parser.add_argument('--device', default=torch.device("cuda" if torch.cuda.is_available() else "cpu"))
-    parser.add_argument("--sigma", type=float, default=0.05, help="用于控制高斯噪声强度")
+    parser.add_argument("--sigma", type=float, default=0.01, help="用于控制高斯噪声强度")
     parser.add_argument("--max_grad_threshold", type=float, default=1.0, help="梯度裁剪阈值")
     parser.add_argument('--weight_decay', type=float, default=1e-4, help='权重衰减')
 
