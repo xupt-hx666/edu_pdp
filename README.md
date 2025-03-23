@@ -99,6 +99,16 @@ Client 4 Test | Loss: 0.0141 | Acc: 99.75%
 =======================
 个性化层平均差异度：32.2321
 3.paillier同态加密参数结果
+=== Final Test ===
+====================================
+Client 0 Test | Loss: 0.8809 | Acc: 80.69%
+Client 1 Test | Loss: 0.8173 | Acc: 78.00%
+Client 2 Test | Loss: 0.7299 | Acc: 77.92%
+Client 3 Test | Loss: 0.4761 | Acc: 89.52%
+Client 4 Test | Loss: 0.5908 | Acc: 78.54%
+个性层差异
+=======================
+个性化层平均差异度：13.4910
 
 
 
@@ -108,11 +118,10 @@ Client 4 Test | Loss: 0.0141 | Acc: 99.75%
 2. 可以考虑在训练后期冻结基础层的更新，专注与客户端本地的个性化训练。
 3. 根据实际的客户端总数，以及网络带宽及服务器处理能力，调整每轮通信过程客户端的采样率。
 
-二. 大模型安全---隐私保护
+二. 大模型安全---多层隐私保护
 1. 增加差分隐私
 通过添加噪声，来保护个体数据的隐私(即使攻击者知道数据集中所有除该个体数据外的所有数据点的信息，也无法通过算法的输出来推断该数据点的具体信息)。通常在数据或者计算结果中添加噪声，使得攻击者无法确定某个个体数据是否被用于参与训练。
-攻击威胁：客户端在上传参数时，攻击者很可能通过截获参数(算法输出)来获取个体数据。
-应对方案：在参数上添加高斯噪声，防止原始数据泄露。
+噪声添加有两个选择，一个是在梯度上加噪声，一个是在模型参数上加噪声，由于在机器学习中梯度是模型参数对损失函数的偏导，梯度所包含的信息更多，在梯度上添加噪声优于在梯度上添加噪声。
 # 梯度裁剪和噪声添加
 torch.nn.utils.clip_grad_norm_(model.parameters(), args.max_grad_threshold)
 # 梯度裁剪，防止加入噪声后梯度爆炸
@@ -120,8 +129,37 @@ for param in model.parameters():
     if param.grad is not None:
         noise = torch.randn_like(param.grad) * args.sigma
         param.grad += noise.to(args.device)
-2. 使用部分同态安全方案(Paillier加密算法)。
+2. 使用部分同态安全方案(Paillier加密算法)
+将客户端参数进行加密，传给服务端的是一个个加密后的客户端模型更新参数，而同态加密支持在不解密的情况下对加密数据进行操作，paillier部分同态支持数据的加法操作，进行fedavg聚合后得到经过加密的最新全局模型参数，参数解密后更新全局模型参数。这样服务器就无法得到各个客户端的参数，但却可以得到更新后的全局模型参数。
+class PaillierEncryptor:
+    def __init__(self, key_size=1024):
+        self.public_key, self.private_key = paillier.generate_paillier_keypair(n_length=key_size)
 
+    def encrypt_tensor(self, tensor, progress=True):
+        """加密张量并返回加密后的数据和原始形状"""
+        scaled = (tensor.cpu().numpy() * 1e4 + 1e4).astype(int)  # 处理负值并放大
+        # 检查参数范围
+        if np.any(scaled < 0) or np.any(scaled >= self.public_key.n):
+            raise ValueError("加密值超出Paillier支持范围")
+        encrypted = []
+        with tqdm(total=scaled.size, desc="Encrypting", disable=not progress) as pbar:
+            for x in scaled.flatten():
+                encrypted.append(self.public_key.encrypt(int(x)))
+                pbar.update(1)
+        return {
+            "shape": tensor.shape,
+            "encrypted": encrypted
+        }
+
+    def decrypt_tensor(self, encrypted_data, progress=True):
+        """解密数据并还原为PyTorch张量"""
+        decrypted = []
+        with tqdm(total=len(encrypted_data["encrypted"]), desc="Decrypting", disable=not progress) as pbar:
+            for x in encrypted_data["encrypted"]:
+                decrypted.append(self.private_key.decrypt(x))
+                pbar.update(1)
+        decrypted_np = (np.array(decrypted).reshape(encrypted_data["shape"]) - 1e4) / 1e4  # 还原缩放和偏移
+        return torch.from_numpy(decrypted_np).float()
 
 
 
